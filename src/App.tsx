@@ -114,8 +114,9 @@ export default function App() {
   const example = "81 17 00 7B 00 F0 01 2C DO";
 
   return (
-    <div className="max-w-3xl mx-auto p-6">
-      <p className="mb-4 text-sm text-gray-600">
+    <div className="max-w-3xl mx-auto p-6 text-gray-900">{/* << ajouté */}
+      <h1 className="text-2xl font-bold mb-4">Hex Frame Decoder (NextPM – MVP)</h1>
+      <p className="mb-4 text-sm text-gray-900">{/* << remplacé */}
         Paste a simple-protocol frame (start=0x81). Supported: 0x16 (status), 0x17
         (PM µg/m³), 0x25 (5 bins Nb/L).
       </p>

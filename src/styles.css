@@ -1,14 +1,29 @@
-/* Force all text to be dark by default */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Thème global */
+:root {
+  color-scheme: light dark;
+}
+
 body {
   @apply text-gray-900 dark:text-gray-100;
 }
 
-/* Ensure tables, labels, headings use darker color */
+/* Force override of Tailwind grays → tout en noir par défaut */
+.text-gray-500,
+.text-gray-600,
+.text-gray-700 {
+  @apply text-gray-900 !important;
+}
+
+/* Rendre le texte des tableaux et labels plus lisible */
 table, td, th, h1, h2, h3, h4, h5, h6, p, label {
   @apply text-gray-900;
 }
 
-/* Optional: make error messages stronger red */
+/* Messages d’erreur plus visibles */
 .bg-red-50 {
   @apply text-red-900;
 }

@@ -6,7 +6,7 @@ import { normalizeHexToBytes } from "./decode/hex";
 import { sum8Complement } from "./decode/checksum";
 import { decodeWithSchema, type Schema } from "./decode/schema";
 
-// Schémas supportés (protocole simple NextPM)
+// Supported schemas (NextPM simple protocol)
 const SCHEMAS: Schema[] = [
   {
     id: "nextpm@0x16@1.0.0",
@@ -51,14 +51,8 @@ function findSchema(cmd: number): Schema | undefined {
 export default function App() {
   const [input, setInput] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [rows, setRows] = useState<{ name: string; value: string | number }[]>(
-    []
-  );
-  const [meta, setMeta] = useState<{
-    command?: string;
-    status?: string;
-    checksum?: string;
-  }>({});
+  const [rows, setRows] = useState<{ name: string; value: string | number }[]>([]);
+  const [meta, setMeta] = useState<{ command?: string; status?: string; checksum?: string }>({});
 
   function decode() {
     setError(null);
@@ -76,18 +70,12 @@ export default function App() {
       const expected = sum8Complement(bytes, true);
       const provided = bytes[bytes.length - 1];
       if (expected !== provided)
-        throw new Error(
-          `Checksum mismatch (expected 0x${expected.toString(
-            16
-          )}, got 0x${provided.toString(16)}).`
-        );
+        throw new Error(`Checksum mismatch (expected 0x${expected.toString(16)}, got 0x${provided.toString(16)}).`);
 
       const dec = decodeWithSchema(bytes, schema);
 
       const out: { name: string; value: string | number }[] = [];
-      Object.entries(dec.fields).forEach(([k, v]) =>
-        out.push({ name: k, value: v })
-      );
+      Object.entries(dec.fields).forEach(([k, v]) => out.push({ name: k, value: v }));
 
       let statusText: string | undefined;
       if (typeof dec.status === "number") {
@@ -95,9 +83,7 @@ export default function App() {
         const flags: string[] = [];
         if (b & 0x01) flags.push("Default/Sleep");
         if (b & 0x04) flags.push("Not Ready");
-        statusText = `0x${b.toString(16).padStart(2, "0")} (${
-          flags.join(", ") || "OK"
-        })`;
+        statusText = `0x${b.toString(16).padStart(2, "0")} (${flags.join(", ") || "OK"})`;
       }
 
       setRows(out);
@@ -116,12 +102,12 @@ export default function App() {
   return (
     <div className="max-w-3xl mx-auto p-6 text-gray-900">
       <p className="mb-4 text-sm text-gray-900">
-        Paste a simple-protocol frame (start=0x81). Supported: 0x16 (status),
-        0x17 (PM µg/m³), 0x25 (5 bins Nb/L).
+        Paste a simple-protocol frame (start=0x81). Supported: 0x16 (status), 0x17 (PM µg/m³), 0x25 (5 bins Nb/L).
       </p>
       <button className="text-xs underline mb-2" onClick={() => setInput(example)}>
         Load example
       </button>
+
       <FrameInput value={input} onChange={setInput} onDecode={decode} />
       <Errors message={error} />
       {!error && (
@@ -132,17 +118,15 @@ export default function App() {
             rows={[
               ...(meta.command ? [{ name: "Command", value: meta.command }] : []),
               ...(meta.status ? [{ name: "Status", value: meta.status }] : []),
-              ...(meta.checksum
-                ? [{ name: "Checksum", value: meta.checksum }]
-                : []),
+              ...(meta.checksum ? [{ name: "Checksum", value: meta.checksum }] : []),
             ]}
           />
         </>
       )}
+
       <div className="mt-8 text-xs text-gray-500">
         Checksum rule: (0x100 - (sum(bytes except checksum) % 256)) & 0xFF.
       </div>
-      {/* Build stamp placé DANS le return */}
       <div className="mt-6 text-xs">Build stamp: 2025-08-22T17:25Z</div>
     </div>
   );

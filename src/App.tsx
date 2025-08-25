@@ -146,5 +146,6 @@ export default function App() {
         Checksum rule: (0x100 - (sum(bytes except checksum) % 256)) & 0xFF.
       </div>
     </div>
+    <div className="mt-6 text-xs">Build stamp: 2025-08-22T17:25Z</div>
   );
 }

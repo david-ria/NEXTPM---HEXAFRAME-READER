@@ -37,4 +37,113 @@ const SCHEMAS: Schema[] = [
       { name: "Bin1", type: "uint16", unit: "Nb/L" },
       { name: "Bin2", type: "uint16", unit: "Nb/L" },
       { name: "Bin3", type: "uint16", unit: "Nb/L" },
-      { name: "Bin4", type
+      { name: "Bin4", type: "uint16", unit: "Nb/L" },
+      { name: "Bin5", type: "uint16", unit: "Nb/L" },
+    ],
+    hasStatusByte: false,
+  },
+];
+
+function findSchema(cmd: number): Schema | undefined {
+  return SCHEMAS.find((s) => s.command === cmd);
+}
+
+export default function App() {
+  const [input, setInput] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [rows, setRows] = useState<{ name: string; value: string | number }[]>(
+    []
+  );
+  const [meta, setMeta] = useState<{
+    command?: string;
+    status?: string;
+    checksum?: string;
+  }>({});
+
+  function decode() {
+    setError(null);
+    setRows([]);
+    setMeta({});
+    try {
+      const bytes = normalizeHexToBytes(input);
+      if (bytes.length < 3) throw new Error("Frame too short.");
+      if (bytes[0] !== 0x81) throw new Error("Invalid start byte (expected 0x81).");
+
+      const cmd = bytes[1];
+      const schema = findSchema(cmd);
+      if (!schema) throw new Error("Unknown command: 0x" + cmd.toString(16));
+
+      const expected = sum8Complement(bytes, true);
+      const provided = bytes[bytes.length - 1];
+      if (expected !== provided)
+        throw new Error(
+          `Checksum mismatch (expected 0x${expected.toString(
+            16
+          )}, got 0x${provided.toString(16)}).`
+        );
+
+      const dec = decodeWithSchema(bytes, schema);
+
+      const out: { name: string; value: string | number }[] = [];
+      Object.entries(dec.fields).forEach(([k, v]) =>
+        out.push({ name: k, value: v })
+      );
+
+      let statusText: string | undefined;
+      if (typeof dec.status === "number") {
+        const b = dec.status;
+        const flags: string[] = [];
+        if (b & 0x01) flags.push("Default/Sleep");
+        if (b & 0x04) flags.push("Not Ready");
+        statusText = `0x${b.toString(16).padStart(2, "0")} (${
+          flags.join(", ") || "OK"
+        })`;
+      }
+
+      setRows(out);
+      setMeta({
+        command: `0x${cmd.toString(16)}`,
+        status: statusText,
+        checksum: `0x${provided.toString(16).padStart(2, "0")}`,
+      });
+    } catch (e: any) {
+      setError(e.message || String(e));
+    }
+  }
+
+  const example = "81 17 00 7B 00 F0 01 2C D0";
+
+  return (
+    <div className="max-w-3xl mx-auto p-6 text-gray-900">
+      <p className="mb-4 text-sm text-gray-900">
+        Paste a simple-protocol frame (start=0x81). Supported: 0x16 (status),
+        0x17 (PM µg/m³), 0x25 (5 bins Nb/L).
+      </p>
+      <button className="text-xs underline mb-2" onClick={() => setInput(example)}>
+        Load example
+      </button>
+      <FrameInput value={input} onChange={setInput} onDecode={decode} />
+      <Errors message={error} />
+      {!error && (
+        <>
+          <ResultTable title="Decoded fields" rows={rows} />
+          <ResultTable
+            title="Meta"
+            rows={[
+              ...(meta.command ? [{ name: "Command", value: meta.command }] : []),
+              ...(meta.status ? [{ name: "Status", value: meta.status }] : []),
+              ...(meta.checksum
+                ? [{ name: "Checksum", value: meta.checksum }]
+                : []),
+            ]}
+          />
+        </>
+      )}
+      <div className="mt-8 text-xs text-gray-500">
+        Checksum rule: (0x100 - (sum(bytes except checksum) % 256)) & 0xFF.
+      </div>
+      {/* Build stamp placé DANS le return */}
+      <div className="mt-6 text-xs">Build stamp: 2025-08-22T17:25Z</div>
+    </div>
+  );
+}
